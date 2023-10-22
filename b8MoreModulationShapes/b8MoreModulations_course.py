@@ -1,9 +1,23 @@
+import sys
 import time
 # from rtmidi.midiconstants import (CONTROL_CHANGE) not needed with rtmidi2
 import rtmidi2
 import numpy as np
+from scipy import signal as sig
 import matplotlib.pyplot as plt
 
+# NEW only draws these for now period 1 max duration 1.00001 = 1 cycle
+PERIOD = 1
+MAX_DURATION = 2.00001
+# start for wave ranges
+START = 0
+SAW = "SAW"
+SINE = "SINE"
+SQUARE = "SQUARE"
+#TRIANGLE = "TRIANGLE" not available in
+MODULATION_SHAPE = SQUARE
+
+# OLD
 # send only the slice as you have made it to the channel and cc num below, alt will be list based on entire time list
 send_slice_to_mod = True
 # if sending a slice repeats need to be higher, otherwise effect can be very short
@@ -14,10 +28,9 @@ IN_MAX = 1
 OUT_MIN = 0
 OUT_MAX = 127
 
-
 CHANNEL = 0
 CC_NUM = 75
-SPEED = 0.01
+BETWEEN_MESSAGE_SLEEP = 0.01
 portList = rtmidi2.get_out_ports()
 midiOut = rtmidi2.MidiOut()
 timeUnit = .5
@@ -25,7 +38,8 @@ midiOut.open_port(1)
 
 TIME_LIST_START = 0
 TIME_LIST_END = 80.1
-SPACING = 0.01
+# Increment size in created list
+GRANULARITY = 0.01
 
 SLICE_START = 0
 SLICE_END = 1258
@@ -37,9 +51,10 @@ show_slice_plot = True
 
 def print_modulation_curve_params(time_list_size, amplitude_size, time_list_slice_size, amplitude_list_slice_size):
     print(f"MIDI_PORTS_rtmidi2_SEES {rtmidi2.get_out_ports()}")
-    print(f"TIME_LIST_START/END/SPACING {TIME_LIST_START} {TIME_LIST_END} {SPACING}")
+    print(f"TIME_LIST_START/END/SPACING {TIME_LIST_START} {TIME_LIST_END} {GRANULARITY}")
     print(f"time_list_size/amplitude(list)_size {time_list_size} / {amplitude_size}")
-    print(f"SLICE_START/END/timeSliceSize/ampSliceSize {SLICE_START} / {SLICE_END} / {time_list_slice_size} / {amplitude_list_slice_size}")
+    print(
+        f"SLICE_START/END/timeSliceSize/ampSliceSize {SLICE_START} / {SLICE_END} / {time_list_slice_size} / {amplitude_list_slice_size}")
 
 
 # Comments == current level of understanding
@@ -68,13 +83,14 @@ def send_mod(amplitude, repeat):
         scaled.append(val)
     for _ in range(repeat):
         if print_send_report & not_printed:
-            print(f"scaled list put through convert range inmin {IN_MIN} / max {IN_MAX} / outmin {OUT_MIN} / max {OUT_MAX} "
-                  f"of size: {len(scaled)} ")
+            print(
+                f"scaled list put through convert range inmin {IN_MIN} / max {IN_MAX} / outmin {OUT_MIN} / max {OUT_MAX} "
+                f"of size: {len(scaled)} ")
             not_printed = False
         for value in scaled:
             # rtmidi way mod = ([CONTROL_CHANGE | CHANNEL, CC_NUM, value])
             midiOut.send_cc(CHANNEL, CC_NUM, value)
-            time.sleep(SPEED)
+            time.sleep(BETWEEN_MESSAGE_SLEEP)
 
 
 def print_plot(title, xlabel, ylabel, time_list, amplitude_list):
@@ -95,7 +111,7 @@ def modulation_shape(REPEAT):
     :return: void
     """
     # return evenly spaced values within a given interval
-    time_list = np.arange(TIME_LIST_START, TIME_LIST_END, SPACING)
+    time_list = np.arange(TIME_LIST_START, TIME_LIST_END, GRANULARITY)
     time_list_size = time_list.size
 
     # CHANGE MODULATION HERE  cos, sin
@@ -124,4 +140,25 @@ def modulation_shape(REPEAT):
         send_mod(amplitude, REPEAT)
 
 
-modulation_shape(REPEAT)
+
+def draw_modulation_shape(shape: str, period: float, max_duration: float, granularity: float):
+    x = np.arange(START, max_duration, granularity)
+    if shape == "SINE":
+        y = np.sin(2 * np.pi / period * x)
+    elif shape == "SAW":
+        y = sig.sawtooth(2 * np.pi / period * x)
+    elif shape == "SQUARE":
+        y = sig.square(2 * np.pi / period * x)
+    #elif shape == "TRIANGLE":
+        #y = sig.triang(2 * np.pi / period * x)
+    else:
+        print("NonConstant code passed, please pass only one of the labelled signal types")
+        sys.exit()
+
+    print_plot("Modulation Shape", "Time", f"Amplitude = {shape} (time)", x, y)
+
+
+#New
+draw_modulation_shape(MODULATION_SHAPE, PERIOD, MAX_DURATION, GRANULARITY)
+# Original manually change slices as per code @ b8MoreModulations.py
+# modulation_shape(REPEAT)
