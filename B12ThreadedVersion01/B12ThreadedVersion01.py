@@ -9,7 +9,7 @@ import threading
 PERIOD = 1
 # Originally got rid of flicker on repeat (B8) it was a way of returning modulation shape to start, here is just used
 # for experimentation
-MAX_DURATION_ADDITIONAL = -0.4
+MAX_DURATION_ADDITIONAL = 0
 # start for wave ranges
 START = 0
 SAW = "SAW"
@@ -20,8 +20,8 @@ MODULATION_SHAPE = SAW
 
 # MELODY
 # 4/4 4bpb
-REPEAT_BAR = 1
-BPM = 150
+REPEAT_BAR = 4
+BPM = 60
 
 # OLD
 # send only the slice as you have made it to the channel and cc num below, alt will be list based on entire time list
@@ -60,7 +60,9 @@ def play_melody(melody, bpm):
     for pitch, duration in melody:
         sleep_duration_to_fill_beat = duration_to_time_delay(duration, bpm)
         midiOut.send_noteon(0x90, pitch, 112)
-        print(f"sleeping for {sleep_duration_to_fill_beat}")
+        print("-------------------------------------------------------------")
+        print("-------------------------------------------------------------")
+        print(f"\nsleep_duration_to_fill_beat {sleep_duration_to_fill_beat}")
         time.sleep(sleep_duration_to_fill_beat)
         midiOut.send_noteoff(0x80, pitch)
 
@@ -68,12 +70,15 @@ def play_melody(melody, bpm):
 def play_modulation(y, max_duration):
     max_duration += MAX_DURATION_ADDITIONAL
     pause_duration = max_duration / y.size
-
+    printValues = False
+    # Sending slices of modulation pattern
     for v in y:
         v = convert_range(v, -1.0, 1.0, 0, 127)
-        print(f"Modulation value {v}")
+        if printValues:
+            print(f"Sending modulation value {v}")
         midiOut.send_cc(CHANNEL, CC_NUM, v)
-        print(f"Sleeping for pause duration {pause_duration}")
+        if printValues:
+            print(f"pausing for {pause_duration} before next modulation v in y")
         time.sleep(pause_duration)
 
 
@@ -198,7 +203,7 @@ def duration_to_time_delay(note_duration, bpm):
         assert False
     bps = bpm / 60
 
-    return factor / bps
+    return factor * bps
 
 
 # list comprehension
