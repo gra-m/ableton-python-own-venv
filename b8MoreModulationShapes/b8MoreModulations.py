@@ -31,8 +31,8 @@ SLICE_START = 0
 SLICE_END = 1258
 print_modulation_param_report = True
 print_send_report = True
-show_full_plot = True
-show_slice_plot = True
+show_full_plot = False
+show_slice_plot = False
 
 
 def print_modulation_curve_params(time_list_size, amplitude_size, time_list_slice_size, amplitude_list_slice_size):

@@ -1,27 +1,27 @@
-import sys
-import threading
 import time
 import rtmidi2
 import numpy as np
 from scipy import signal as sig
 import matplotlib.pyplot as plt
+import threading
 
 # NEW only draws these for now period 1 max duration 1.00001 = 1 cycle
 PERIOD = 1
-# Gets rid of flicker on repeat, returns wave to where it started
-MAX_DURATION_ADDITIONAL = .00001
+# Originally got rid of flicker on repeat (B8) it was a way of returning modulation shape to start, here is just used
+# for experimentation
+MAX_DURATION_ADDITIONAL = -0.4
 # start for wave ranges
 START = 0
 SAW = "SAW"
 SINE = "SINE"
 SQUARE = "SQUARE"
 # TRIANGLE = "TRIANGLE" not available in
-MODULATION_SHAPE = SQUARE
+MODULATION_SHAPE = SAW
 
 # MELODY
 # 4/4 4bpb
-REPEAT_BAR = 8
-BPM = 30
+REPEAT_BAR = 1
+BPM = 150
 
 # OLD
 # send only the slice as you have made it to the channel and cc num below, alt will be list based on entire time list
@@ -34,7 +34,7 @@ IN_MAX = 1
 OUT_MIN = 0
 OUT_MAX = 127
 
-CHANNEL = 2
+CHANNEL = 0
 CC_NUM = 75
 BETWEEN_MESSAGE_SLEEP = 0.001
 portList = rtmidi2.get_out_ports()
@@ -169,7 +169,7 @@ def modulation_shape(REPEAT):
 
 
 def get_modulation_shape(shape: str, period: float, max_duration: float, granularity: float):
-    x = np.arange(START, max_duration, granularity)
+    x = np.arange(START, max_duration + MAX_DURATION_ADDITIONAL, granularity)
     if shape == "SINE":
         y = np.sin(2 * np.pi / period * x)
     elif shape == "SAW":
@@ -198,7 +198,7 @@ def duration_to_time_delay(note_duration, bpm):
         assert False
     bps = bpm / 60
 
-    return factor * bps
+    return factor / bps
 
 
 # list comprehension
@@ -209,6 +209,7 @@ def duration_of_melody(melody, bpm):
 def main():
     print(f"MIDI_PORTS_rtmidi2_SEES {rtmidi2.get_out_ports()}")
     melody = [(60, "e"), (62, "e"), (67, "q"), (62, "q"), (67, "q")] * REPEAT_BAR
+    #melody = [(60, "w")]  * REPEAT_BAR
     melody_duration = duration_of_melody(melody, BPM)
     modulation_shape = get_modulation_shape(MODULATION_SHAPE, PERIOD, melody_duration + MAX_DURATION_ADDITIONAL,
                                             GRANULARITY)
@@ -217,10 +218,9 @@ def main():
     # melody = [(60, "q"), (60, "q"), (60, "q"), (60, "q")]  * REPEAT_BAR
     # check_bar
     print(f"duration of melody: {melody_duration} seconds")
-    modulation = get_modulation_shape(MODULATION_SHAPE, PERIOD, melody_duration, GRANULARITY)
-    melody_thread = threading.Thread(target=play_melody(melody, BPM))
-    modulation_thread = threading.Thread(target=play_modulation(modulation_shape, melody_duration))
-    #modulation_thread.start()
+    modulation_thread = threading.Thread(target=play_modulation, args=(modulation_shape, melody_duration))
+    melody_thread = threading.Thread(target=play_melody, args=(melody, BPM))
+    modulation_thread.start()
     melody_thread.start()
 
 
